@@ -1,0 +1,44 @@
+# Deep Learning Frameworks
+# Note: pytorch-forecasting nécessite pytorch-lightning < 2.0
+# et PyTorch < 2.4.0 pour être compatible avec pytorch-lightning 1.8.x
+# IMPORTANT: Ne pas installer le package "lightning" (nouveau nom) qui entre en conflit
+torch>=2.0.0,<2.4.0
+torchvision>=0.15.0,<0.19.0
+torchaudio>=2.0.0,<2.4.0
+pytorch-lightning>=1.8.0,<2.0.0
+pytorch-forecasting>=1.0.0
+performer-pytorch>=1.1.4
+
+# Data Processing
+pandas>=1.5.0
+numpy>=1.23.0
+scikit-learn>=1.2.0
+
+# Cryptocurrency Data
+ccxt>=4.0.0
+
+# Technical Analysis
+ta>=0.11.0
+
+# Time Series Analysis
+statsmodels>=0.14.0
+
+# Visualization
+matplotlib>=3.6.0
+seaborn>=0.12.0
+plotly>=5.0.0
+nbformat>=4.2.0
+
+# Machine Learning
+xgboost>=1.7.0
+
+# Hyperparameter Optimization
+optuna>=3.0.0
+
+# Utilities
+python-dateutil>=2.8.0
+tqdm>=4.65.0
+
+# Additional
+scipy>=1.10.0
+joblib>=1.2.0

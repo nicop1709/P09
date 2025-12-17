@@ -1,0 +1,16 @@
+.venv
+.env
+*.csv
+*.md
+*.json
+checkpoints
+lightning_logs
+session
+tsfm
+ttm_finetune_out
+.claude
+.cursor
+__pycache__/
+*__pycache__*
+.DS_Store
+*.log

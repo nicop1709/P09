@@ -1,0 +1,108 @@
+
+============================================================
+🚀 OPTIMISATION TABNET vs RANDOMFOREST
+============================================================
+📊 Chargement des données...
+   → 57372 lignes chargées
+🔧 Création des features...
+   → 57322 lignes après features
+✂️  Split train/valid/test...
+   → Train: 48723, Valid: 5732, Test: 2867
+
+============================================================
+🌲 BASELINE : RandomForest
+============================================================
+   Entraînement...
+   ✅ ROC-AUC: 0.5188
+   ✅ Capital final: 983.32€
+   ✅ PnL: -16.68€
+
+============================================================
+🔥 OPTIMISATION TABNET
+============================================================
+🎯 Objectif : PnL > -16.68€
+
+
+🧪 Test 1/6 : Config1_large_long
+   Params: n_d=64, n_a=64, n_steps=6, lr=0.001
+
+Early stopping occurred at epoch 88 with best_epoch = 48 and best_valid_auc = 0.54107
+   ROC-AUC: 0.4969
+   Meilleur seuil: 0.65
+   Capital final: 964.89€
+   PnL: -35.11€ ❌ (écart: -18.42€)
+
+🧪 Test 2/6 : Config2_xlarge
+   Params: n_d=128, n_a=128, n_steps=7, lr=0.0005
+
+Early stopping occurred at epoch 59 with best_epoch = 9 and best_valid_auc = 0.53844
+   ROC-AUC: 0.4812
+   Meilleur seuil: 0.50
+   Capital final: 963.56€
+   PnL: -36.44€ ❌ (écart: -19.76€)
+
+🧪 Test 3/6 : Config3_medium_opt
+   Params: n_d=48, n_a=48, n_steps=6, lr=0.001
+
+Early stopping occurred at epoch 51 with best_epoch = 16 and best_valid_auc = 0.5255
+   ROC-AUC: 0.5144
+   Meilleur seuil: 0.65
+   Capital final: 976.04€
+   PnL: -23.96€ ❌ (écart: -7.28€)
+
+🧪 Test 4/6 : Config4_deep
+   Params: n_d=64, n_a=64, n_steps=10, lr=0.0008
+
+Early stopping occurred at epoch 85 with best_epoch = 45 and best_valid_auc = 0.53146
+   ROC-AUC: 0.5194
+   Meilleur seuil: 0.65
+   Capital final: 911.39€
+   PnL: -88.61€ ❌ (écart: -71.92€)
+
+🧪 Test 5/6 : Config5_balanced
+   Params: n_d=32, n_a=32, n_steps=5, lr=0.0015
+
+Early stopping occurred at epoch 32 with best_epoch = 2 and best_valid_auc = 0.5378
+   ROC-AUC: 0.4997
+   Meilleur seuil: 0.60
+   Capital final: 958.88€
+   PnL: -41.12€ ❌ (écart: -24.43€)
+
+🧪 Test 6/6 : Config6_aggressive
+   Params: n_d=96, n_a=96, n_steps=8, lr=0.002
+
+Early stopping occurred at epoch 88 with best_epoch = 53 and best_valid_auc = 0.54802
+   ROC-AUC: 0.5126
+   Meilleur seuil: 0.65
+   Capital final: 996.26€
+   PnL: -3.74€ ✅ MEILLEUR QUE RF!
+
+============================================================
+📊 RÉSULTATS FINAUX
+============================================================
+
+Tous les résultats (triés par PnL) :
+            Config  n_d  n_a  n_steps     lr  Best_Threshold  ROC_AUC    Capital        PnL Beats_RF
+Config6_aggressive   96   96        8 0.0020            0.65 0.512645 996.263060  -3.736940        ✅
+Config3_medium_opt   48   48        6 0.0010            0.65 0.514420 976.037086 -23.962914        ❌
+Config1_large_long   64   64        6 0.0010            0.65 0.496865 964.894013 -35.105987        ❌
+    Config2_xlarge  128  128        7 0.0005            0.50 0.481202 963.558375 -36.441625        ❌
+  Config5_balanced   32   32        5 0.0015            0.60 0.499739 958.883087 -41.116913        ❌
+      Config4_deep   64   64       10 0.0008            0.65 0.519355 911.392735 -88.607265        ❌
+
+============================================================
+🏆 COMPARAISON FINALE
+============================================================
+RandomForest   : 983.32€ (PnL: -16.68€, ROC-AUC: 0.5188)
+TabNet (best)  : 996.26€ (PnL: -3.74€, ROC-AUC: 0.5126)
+
+✅ SUCCÈS ! TabNet bat RandomForest de 12.95€
+
+🎯 Configuration gagnante :
+   - Config6_aggressive
+   - n_d=96, n_a=96, n_steps=8
+   - Learning rate: 0.002
+   - Seuil optimal: 0.65
+   - Gamma: 1.6
+   - Patience: 35
+============================================================
