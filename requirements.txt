@@ -32,6 +32,10 @@ nbformat>=4.2.0
 # Machine Learning
 xgboost>=1.7.0
 
+# Reinforcement Learning
+gym>=0.26.0
+stable-baselines3[extra]>=2.0.0
+
 # Hyperparameter Optimization
 optuna>=3.0.0
 
