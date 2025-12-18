@@ -5,7 +5,8 @@ import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from pandas import to_datetime
 import numpy as np
-from utils import Backtest, plot_backtest
+from backtest import Backtest
+from utils import prepare_data_min_features
 
 st.title("Projet 9 - RandomForest vs TabNet et TTM signaux trading")
 
@@ -16,7 +17,6 @@ TTM est un modèle de classification qui utilise un modèle de prédiction pour 
 Les modèles sont entraînés sur un dataset de crypto currency prices et utilisent un modèle de classification pour prédire les signaux de trading.
 Les modèles sont évalués sur un dataset de crypto currency prices et utilisent un modèle de classification pour prédire les signaux de trading.
 """)
-
 
 st.header("EDA Dataset historique BTC-USDC 1h")
 
