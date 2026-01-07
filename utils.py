@@ -5,16 +5,55 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import ta
+import ccxt
+from datetime import datetime, timezone
 
-def plot_backtest(backtester):
+def to_ms(dt: datetime) -> int:
+    return int(dt.replace(tzinfo=timezone.utc).timestamp() * 1000)
+
+def fetch_ohlcv_binance(pair: str, timeframe: str, start_date: int, end_date: int, limit=1000):
+    ex = ccxt.binance({"enableRateLimit": True})
+    all_rows = []
+    since = to_ms(pd.to_datetime(start_date))
+    end_ms = to_ms(pd.to_datetime(end_date))
+
+    while since < end_ms:
+        batch = ex.fetch_ohlcv(pair, timeframe=timeframe, since=since, limit=limit)
+        if not batch:
+            break
+        all_rows.extend(batch)
+        # avance d'un pas après le dernier timestamp
+        since = batch[-1][0] + 1
+
+        # sécurité anti-boucle
+        if len(batch) < 10:
+            break
+
+    df = pd.DataFrame(all_rows, columns=["Timestamp", "Open", "High", "Low", "Close", "Volume"])
+    df["Timestamp"] = pd.to_datetime(df["Timestamp"], unit="ms", utc=True)
+    df = df.drop_duplicates(subset=["Timestamp"]).sort_values("Timestamp").reset_index(drop=True)
+    return df
+
+def plot_backtest(backtester, plot=True):
     # On suppose que trades_df == backtester.df_trades déjà généré avec l'algo ci-dessus
     trades_df = backtester.df_trades
 
     # Pour le graphique, récupérer le temps et close price
     df_curves = backtester.df_bt.reset_index(drop=True)
     df_curves["Timestamp_entry"] = df_curves["Timestamp"]
-    df_curves = pd.merge(df_curves, trades_df[["Timestamp", "exit_price","Capital"]], on="Timestamp", how="left")
-    df_curves = pd.merge(df_curves, trades_df[["Timestamp_entry", "entry_price"]], on="Timestamp_entry", how="left")
+    
+    # Vérifier si trades_df est vide ou n'a pas les colonnes nécessaires
+    if len(trades_df) > 0 and "Timestamp" in trades_df.columns and "exit_price" in trades_df.columns and "Capital" in trades_df.columns:
+        df_curves = pd.merge(df_curves, trades_df[["Timestamp", "exit_price","Capital"]], on="Timestamp", how="left")
+    else:
+        df_curves["exit_price"] = None
+        df_curves["Capital"] = backtester.capital_init
+    
+    if len(trades_df) > 0 and "Timestamp_entry" in trades_df.columns and "entry_price" in trades_df.columns:
+        df_curves = pd.merge(df_curves, trades_df[["Timestamp_entry", "entry_price"]], on="Timestamp_entry", how="left")
+    else:
+        df_curves["entry_price"] = None
+    
     df_curves["Capital"] = df_curves["Capital"].ffill().fillna(backtester.capital_init)
 
     timestamps = df_curves["Timestamp"]
@@ -101,8 +140,112 @@ def plot_backtest(backtester):
     fig.update_yaxes(title_text="Prix", row=1, col=1)
     fig.update_yaxes(title_text="Capital", row=2, col=1)
 
-    fig.show()
+    if plot:
+        fig.show()
+    return fig
 
+def plot_predictions(df_bt, signal, plot=True):
+
+    # Pour le graphique, récupérer le temps et close price
+    df_curves = df_bt.reset_index(drop=True)
+    df_curves["Timestamp_entry"] = df_curves["Timestamp"]
+    
+    # Vérifier si trades_df est vide ou n'a pas les colonnes nécessaires
+    #df_curves = pd.merge(df_curves, trades_df[["Timestamp", "exit_price","Capital"]], on="Timestamp", how="left")
+    if signal == 1:
+        df_curves.loc[df_curves.tail(1).index,"Timestamp"] = df_bt["Timestamp"].iloc[-1]
+        df_curves.loc[df_curves.tail(1).index,"entry_price"] = df_bt["Close"].iloc[-1]
+        buy_price = df_curves["entry_price"]
+        sell_price = None
+
+    else:
+        df_curves.loc[df_curves.tail(1).index,"Timestamp"] = df_bt["Timestamp"].iloc[-1]
+        df_curves.loc[df_curves.tail(1).index,"exit_price"] = df_bt["Close"].iloc[-1]
+        sell_price = df_curves["exit_price"]
+        buy_price = None
+
+    timestamps = df_curves["Timestamp"]
+    close_prices = df_curves["Close"]
+    #ajouter un point 24h après la dernière ligne et relier le prix de ce point en pointillés au dernier prix
+    future_list = []
+    future_list.append(pd.DataFrame({"Timestamp": [df_curves["Timestamp"].iloc[-1]], "Close": [df_curves["Close"].iloc[-1]]}))
+    future_list.append(pd.DataFrame({"Timestamp": [df_curves["Timestamp"].iloc[-1] + pd.Timedelta(hours=24)], "Close": [df_curves["Close"].iloc[-1] * (1 + 0.002*(2*signal-1))]}))
+
+    future_price = pd.concat(future_list)
+    print(f"signal: {signal}")
+    print(df_curves["Close"])
+    print(f"future_price: {future_price}")
+
+    buy_time = df_curves["Timestamp_entry"]
+    sell_time = df_curves["Timestamp"]
+    # Créer un subplot avec 1 graphique
+    fig = go.Figure()
+
+    # Graphique 1 : Prix avec signaux Future Price
+    if signal == 1:
+        fig.add_trace(
+            go.Scatter(
+                x=future_price["Timestamp"],
+                y=future_price["Close"],
+                mode='lines',
+                name='Future Price',
+                line=dict(color='green', dash='dot')
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=buy_time,
+                y=buy_price,
+                mode='markers',
+                marker=dict(color='green', symbol='triangle-up', size=10),
+                name='Buy'
+            )
+            )
+    else:
+        fig.add_trace(
+            go.Scatter(
+                x=future_price["Timestamp"],
+                y=future_price["Close"],
+                mode='lines',
+                name='Future Price',
+                line=dict(color='red', dash='dot')
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=sell_time,
+                y=sell_price,
+                mode='markers',
+                marker=dict(color='red', symbol='triangle-down', size=10),
+                name='Sell'
+            ),
+        )        
+
+
+    fig.add_trace(
+        go.Scatter(
+            x=timestamps,
+            y=close_prices,
+            mode='lines',
+            name='Close',
+            line=dict(color='blue')
+        ),
+    )
+
+    fig.update_layout(
+        title='Cours Close avec signaux Buy/Sell',
+        height=800,
+        width=1200,
+        showlegend=True,
+        legend=dict(x=0, y=1)
+    )
+
+    fig.update_xaxes(title_text="Timestamp")
+    fig.update_yaxes(title_text="Prix")
+
+    if plot:
+        fig.show()
+    return fig
 
 def clean_data(df):
     df = df.copy()

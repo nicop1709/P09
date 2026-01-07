@@ -25,11 +25,17 @@ class Backtest:
 
     def run(self):
         trader = Trader([], 0, 0, 0, self.capital, self.portfolio, self.position, self.qty, self.entry_price, self.exit_price, self.fee_roundtrip, self.pct_capital, debug=self.debug, trade_list=self.trade_list, horizon_steps=self.horizon_steps, capital_before_buy=self.capital_init)
-        last_idx = None
-        for i, row in self.df_bt.iterrows():
+        last_pos_idx = None
+        last_df_idx = None
+        print(self.df_bt.head())
+        for pos_idx, (i, row) in enumerate(self.df_bt.iterrows()):
             trader.row = row
             trader.idx = i
-            trader.signal = self.signal[i]
+            # Use positional index for signal to ensure alignment with DataFrame rows
+            if isinstance(self.signal, pd.Series):
+                trader.signal = self.signal.iloc[pos_idx] if pos_idx < len(self.signal) else False
+            else:
+                trader.signal = self.signal[pos_idx] if pos_idx < len(self.signal) else False
             trader.run()
             self.portfolio = trader.portfolio
             self.capital = trader.capital   
@@ -40,34 +46,37 @@ class Backtest:
             self.idx_entry = trader.idx_entry
             self.timestamp_entry = trader.timestamp_entry
             self.capital_before_buy = trader.capital_before_buy
-            last_idx = i
+            last_pos_idx = pos_idx
+            last_df_idx = i
 
         # Clôture forcée si position ouverte en fin de backtest
-        if self.position > 0 and last_idx is not None:
-            last_row = self.df_bt.iloc[last_idx]
-            sell_value = self.qty * last_row["Close"]
-            sell_fees = self.fee_roundtrip * sell_value / 2
-            PnL = self.qty * (last_row["Close"] - self.entry_price)
-            PnL_net = PnL - sell_fees
-            self.capital += sell_value - sell_fees
-            self.portfolio = 0
-            self.position = 0
-            self.trade_list.append({
-                "idx": last_idx,
-                "idx_entry": self.idx_entry,
-                "Timestamp": last_row["Timestamp"],
-                "Timestamp_entry": self.timestamp_entry,
-                "qty": self.qty,
-                "entry_price": self.entry_price,
-                "exit_price": last_row["Close"],
-                "PnL": PnL,
-                "PnL_net": PnL_net,
-                "Capital": self.capital,
-                "MaxDrawDown": self.max_drawdown_pct,
-            })
-            self.qty = 0
-            self.entry_price = 0
-            self.exit_price = 0
+        if last_pos_idx is not None and last_pos_idx < len(self.df_bt):
+            last_row = self.df_bt.iloc[last_pos_idx]
+            if self.position > 0:
+                sell_value = self.qty * last_row["Close"]
+                sell_fees = self.fee_roundtrip * sell_value / 2
+                PnL = self.qty * (last_row["Close"] - self.entry_price)
+                PnL_net = PnL - sell_fees
+                self.capital += sell_value - sell_fees
+                self.portfolio = 0
+                self.position = 0
+                self.trade_list.append({
+                    "idx": last_df_idx,
+                    "idx_entry": self.idx_entry,
+                    "Timestamp": last_row["Timestamp"],
+                    "Timestamp_entry": self.timestamp_entry,
+                    "qty": self.qty,
+                    "entry_price": self.entry_price,
+                    "exit_price": last_row["Close"],
+                    "PnL": PnL,
+                    "PnL_net": PnL_net,
+                    "Capital": self.capital,
+                    "MaxDrawDown": self.max_drawdown_pct,
+                    "position_type": "long",
+                })
+                self.qty = 0
+                self.entry_price = 0
+                self.exit_price = 0
         
         days = (self.df_bt.iloc[-1]["Timestamp"] - self.df_bt.iloc[0]["Timestamp"]).days
         if days <= 0:
@@ -75,7 +84,7 @@ class Backtest:
         self.days = days
         self.PnL = self.capital - self.capital_init
         self.ROI_pct = self.PnL / self.capital_init *100
-        self.ROI_day_pct = ((1 + self.ROI_pct / 100) ** (365.0 / days) - 1) * 100
+        self.ROI_day_pct = ((1 + self.ROI_pct / 100) ** (1  / days) - 1) * 100
         
         # Calculate annualized ROI: convert ROI_pct from percentage to decimal first
         roi_decimal = self.ROI_pct / 100
@@ -85,10 +94,14 @@ class Backtest:
         else:
             self.ROI_annualized_pct = ((1 + roi_decimal) ** (365.0 / days) - 1) * 100
         self.df_trades = pd.DataFrame(self.trade_list)
-        self.win_rates = self.df_trades["PnL"].apply(lambda x: x > 0).mean()*100
+        if len(self.df_trades) > 0 and "PnL" in self.df_trades.columns:
+            self.win_rates = self.df_trades["PnL"].apply(lambda x: x > 0).mean()*100
+            self.max_drawdown_pct = self.df_trades["MaxDrawDown"].max()
+        else:
+            self.win_rates = 0.0
+            self.max_drawdown_pct = 0.0
         self.nb_trades = len(self.df_trades)
-        self.nb_trades_by_day = self.nb_trades / days
-        self.max_drawdown_pct = self.df_trades["MaxDrawDown"].max()
+        self.nb_trades_by_day = self.nb_trades / days if days > 0 else 0
         return self.portfolio, self.capital, self.position, self.qty, self.entry_price, self.exit_price, self.trade_list
     
     def print_stats(self):

@@ -5,18 +5,19 @@ import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from pandas import to_datetime
 import numpy as np
-from utils import Backtest, plot_backtest
+from backtest import Backtest
+from utils import plot_backtest
 
 st.set_page_config(page_icon=":moneybag:")
 
-st.title("Projet 9 - RandomForest vs TabNet et TTM signaux trading")
+st.title("Exploratory Data Analysis")
 
-st.write("""Ce projet compare les performances de deux modèles de classification des signaux de trading pour Bitcoin (BTC) : RandomForest et TabNet.
-RandomForest est un modèle de classification qui utilise un arbre de décision pour prédire les signaux de trading.
-TabNet est un modèle de classification qui utilise un réseau de neurones pour prédire les signaux de trading.
-TTM est un modèle de classification qui utilise un modèle de prédiction pour prédire les signaux de trading.
-Les modèles sont entraînés sur un dataset de crypto currency prices et utilisent un modèle de classification pour prédire les signaux de trading.
-Les modèles sont évalués sur un dataset de crypto currency prices et utilisent un modèle de classification pour prédire les signaux de trading.
+st.write("""Ce notebook explore les données historiques de la paire BTC-USDC 1h de 2015 à 2025.
+Il calcule les features et la target pour la prédiction du ROI futur.
+Il affiche les statistiques des features et de la target.
+Il affiche l'histogramme de la distribution des variations de prix Close.
+Il affiche le backtest parfait avec réinjection de capital.
+Il affiche la liste des trades du backtest parfait.
 """)
 
 
@@ -30,7 +31,7 @@ df = pd.read_csv("btc_usdc_1h_2015_2025.csv")
 # Definir Sidebar
 nb_days_displayed = st.sidebar.slider("Nombre de jours affichés", min_value=1, max_value=100, value=10)
 horizon_steps = st.sidebar.slider("Nombre de bougies 1h pour la prédiction du ROI futur", min_value=1, max_value=24*5, value=24)
-
+fee_roundtrip = st.sidebar.radio("Fee roundtrip", options=[0.0000, 0.0015, 0.0020], index=2)
 
 # Affihcer les données brutes
 df_display = df.tail(nb_days_displayed*24).copy() #24 pour timeframe 1h
@@ -140,8 +141,7 @@ Backtest avec réinjection de capital :
 * VENTE **si** target < seuil **et si** au moins {horizon_steps} bougies 1h ont passé depuis l'achat
 
             """, icon="💡")
-backtest_prefect = Backtest(df_display, pd.Series(df_display[target_col]>seuil))
-backtest_prefect.run()
+backtest_prefect = Backtest(df_display, pd.Series(df_display[target_col]>seuil), fee_roundtrip=fee_roundtrip)
 
 st.subheader("Statistiques du backtest parfait")
 
@@ -163,3 +163,6 @@ st.dataframe(stats_df)
 
 st.subheader("Liste des trades du backtest parfait")
 st.dataframe(pd.DataFrame(backtest_prefect.trade_list))
+
+fig = plot_backtest(backtest_prefect, plot=False)
+st.plotly_chart(fig)

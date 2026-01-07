@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 class Trader:
-    def __init__(self, row: pd.Series, idx: int, idx_entry: int, signal: np.ndarray, capital: float, portfolio: float, position: float, qty: float, entry_price: float, exit_price: float, fee_roundtrip=0.002, pct_capital=1, debug=False, trade_list=[], horizon_steps=24,capital_before_buy=0):
+    def __init__(self, row: pd.Series, idx: int, idx_entry: int, signal: np.ndarray, capital: float, portfolio: float, position: float, qty: float, entry_price: float, exit_price: float, fee_roundtrip=0.002, pct_capital=1, debug=False, trade_list=[], horizon_steps=24,capital_before_buy=0,allow_short=False):
         self.row = row
         self.idx = idx
         self.signal = signal
@@ -21,6 +21,7 @@ class Trader:
         self.max_drawdown_pct = 0
         self.horizon_steps = horizon_steps
         self.capital_before_buy = capital_before_buy
+        self.allow_short = allow_short
 
     def _buy(self):
         self.qty = self.pct_capital * self.capital / self.row["Close"]
