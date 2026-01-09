@@ -1,7 +1,4 @@
 # Deep Learning Frameworks
-# Note: pytorch-forecasting nécessite pytorch-lightning < 2.0
-# et PyTorch < 2.4.0 pour être compatible avec pytorch-lightning 1.8.x
-# IMPORTANT: Ne pas installer le package "lightning" (nouveau nom) qui entre en conflit
 torch>=2.0.0,<2.4.0
 torchvision>=0.15.0,<0.19.0
 torchaudio>=2.0.0,<2.4.0
